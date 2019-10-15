@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jul 11 04:12:19 2019
+
+@author: penglab
+"""
+#%% Initialization
+import numpy as np
+import pandas as pd
+import neuro_morpho_toolbox as nmt
+
+
+
+#ccftable = pd.read_excel('D:\\2019Spring\\Intern\\neuro_morhpo_toolbox-master\\neuro_morpho_toolbox\\data\\CCFv3 Summary Structures.xlsx', usecols=[1, 2, 3, 5, 6, 7], index_col=0,names=['', 'fullname', 'Abbrevation', 'depth in tree', 'structure_id_path','total_voxel_counts (10 um)'])
+ccftable = pd.read_excel('/home/penglab/Documents/data/CCFv3 Summary Structures.xlsx', usecols=[1, 2, 3, 5, 6, 7], index_col=0,names=[ 'fullname', 'Abbrevation', 'depth in tree', 'structure_id_path','total_voxel_counts (10 um)'])
+#Read the corresponding annotation file.
+anofile = nmt.image('/home/penglab/Documents/data/annotation_10.nrrd')
+bs = nmt.brain_structure('/home/penglab/Documents/data/Mouse.csv')
+#Read the corresponding brain structure file. Obtain the information of child regions
+
+#%%Use a dataframe to store the childregion information of Mouse.csv
+ccfINFO = pd.DataFrame(index = ccftable.index,columns=['idx','Child ID','Child num'])
+ccfINFO['idx'] = ccftable.index
+for iterIdx in ccfINFO.index:
+    child_temp=bs.get_all_child_id(iterIdx)
+    child_T_store=[]
+    for iiterIdx in child_temp:
+        child_T_store.append(iiterIdx)
+            #store all the ID as a whole string
+    list2=[str(i) for i in child_T_store]  
+    list3=' '.join(list2) 
+    ccfINFO.loc[iterIdx,'Child ID']=list3
+# Add another column of information indicating the child number    
+Childnum_store=[]
+#iiiter=0
+for IDchild in ccfINFO.index:
+    lenchild=len(ccfINFO.loc[IDchild,'Child ID'].split())
+    ccfINFO.loc[IDchild,'Child num'] = lenchild
+
+ccfINFO.to_excel('/home/penglab/Documents/dataSource/ccfDF.xlsx')  
