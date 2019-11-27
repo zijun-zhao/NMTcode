@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Input Path
-
-# In[1]:
 
 
 import pandas as pd
@@ -15,11 +12,15 @@ import time
 import multiprocessing
 from multiprocessing import Pool
 from functools import partial
-
-path = 'F:\\test21Nov'
-
-# In[2]:
-
+import pandas as pd
+import subprocess
+import shutil
+import numpy as np
+import os
+import time
+import multiprocessing
+from multiprocessing import Pool
+from functools import partial
 
 import random
 import ast
@@ -30,102 +31,8 @@ import matplotlib.pyplot as plt
 import multiprocessing
 import time
 
+path = 'F:\\test25Nov'
 
-def para_cocluster(corenum):
-    start = time.time()
-    exist_table = os.path.exists(os.path.join(path, 'brain_registration.xlsx'))
-    if not exist_table:
-        print('Make sure the table containing brain downsample information exists.')
-
-    exist_ccfbrain = os.path.exists(os.path.join(path, 'average_template_25_u8_xpad.v3draw'))
-    if not exist_ccfbrain:
-        print('Make sure the CCF standard brain template exists.')
-    path_ccfbrain = os.path.join(path, 'average_template_25_u8_xpad.v3draw')
-
-    ##
-    exist_exe_affine = os.path.exists(os.path.join(os.path.join(path, 'second_affine'), 'main_warp_from_affine.exe'))
-    if not exist_exe_affine:
-        print('Make sure the .exe to perform affinement exists')
-    path_exe_affine = os.path.join(os.path.join(path, 'second_affine'), 'main_warp_from_affine.exe')
-
-    exist_manaulM = os.path.exists(os.path.join(os.path.join(path, 'second_affine'), 'Manual_marker'))
-    if not exist_manaulM:
-        print('Make sure the folder containing all manually-labelled marker files exists.')
-    path_manaulM = os.path.join(os.path.join(path, 'second_affine'), 'Manual_marker')
-
-    exist_ccfM = os.path.exists(os.path.join(os.path.join(path, 'second_affine'), 'CCF_marker'))
-    if not exist_ccfM:
-        print('Make sure the folder containing marker inside CCF exists.')
-    path_ccfM = os.path.join(os.path.join(path, 'second_affine'), 'CCF_marker')
-
-    exist_stripmove = os.path.exists(os.path.join(os.path.join(path, 'second_affine'), 'stripMove'))
-    if not exist_stripmove:
-        print('Make sure the folder containing CCF brain of removing strips exists.')
-    path_stripm = os.path.join(os.path.join(path, 'second_affine'), 'stripMove')
-
-    ##
-    exist_exe_warp = os.path.exists(os.path.join(os.path.join(path, 'third_warp_swc'), 'main_warp_from_df_new.exe'))
-    if not exist_exe_warp:
-        print('Make sure the .exe to perform warp exists')
-    path_exe_warp = os.path.join(os.path.join(path, 'third_warp_swc'), 'main_warp_from_df_new.exe')
-
-    exist_afBrain = os.path.exists(os.path.join(os.path.join(path, 'third_warp_swc'), 'affined_brain'))
-    if not exist_afBrain:
-        print('Make sure the folder containing affined brains exists.')
-    path_af_brain = os.path.join(os.path.join(path, 'third_warp_swc'), 'affined_brain')
-
-    exist_auto_brain_m = os.path.exists(os.path.join(os.path.join(path, 'third_warp_swc'), 'brain_auto_marker'))
-    if not exist_auto_brain_m:
-        print('Make sure the folder containing auto generated marker for all brains exists.')
-    path_autoBrain_m = os.path.join(os.path.join(path, 'third_warp_swc'), 'brain_auto_marker')
-
-    exist_auto_ccf_m = os.path.exists(os.path.join(os.path.join(path, 'third_warp_swc'), 'CCF_auto_marker'))
-    if not exist_auto_ccf_m:
-        print('Make sure the folder containing auto generated marker for CCF brains exists.')
-    path_autoCCF_m = os.path.join(os.path.join(path, 'third_warp_swc'), 'CCF_auto_marker')
-
-    exist_ssd = os.path.exists(os.path.join(os.path.join(path, 'third_warp_swc'), 'ssd_grid'))
-    if not exist_ssd:
-        print('Make sure the folder containing grid. swc generated using SSD algorithm.')
-    path_ssdgrid = os.path.join(os.path.join(path, 'third_warp_swc'), 'ssd_grid')
-
-    brain_regis = pd.read_excel(os.path.join(path, 'brain_registration.xlsx'), index_col=[0], skiprows=[0],
-                                names=['ID', 'y_initial', 'x_initial', 'z_initial', 'y_after', 'x_after', 'z_after',
-                                       'ration', 'flip', 'flip_axis'])
-    brain_regis.loc[:, 'x_downsample'] = brain_regis.loc[:, 'x_initial'] / brain_regis.loc[:, 'x_after']
-    brain_regis.loc[:, 'y_downsample'] = brain_regis.loc[:, 'y_initial'] / brain_regis.loc[:, 'y_after']
-    brain_regis.loc[:, 'z_downsample'] = brain_regis.loc[:, 'z_initial'] / brain_regis.loc[:, 'z_after']
-    brain_regis.drop_duplicates(keep='first', inplace=True)
-    brain_regis.fillna(value='NA', inplace=True)
-    brain_regis = brain_regis.loc[~brain_regis.index.duplicated(keep='first')]
-    brain_regis.loc[:, 'x_initial'] = brain_regis.loc[:, 'x_initial'].astype(float)
-    brain_regis.loc[:, 'y_initial'] = brain_regis.loc[:, 'y_initial'].astype(float)
-    brain_regis.loc[:, 'z_initial'] = brain_regis.loc[:, 'z_initial'].astype(float)
-    brain_folder_list = []
-    for subpath in os.listdir(path):
-        if not (subpath) in list(map(str, brain_regis.index.tolist())):
-            print("Skip file " + str(subpath.split('/')[-1]))
-            continue
-        brain_folder_list.append(subpath)
-        print('Find new brain folder ' + str(subpath))
-    print(brain_folder_list)
-    cores = corenum  # multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(processes=cores)
-
-    pool_list = []
-    result_list = []
-    pool.apply(single_brain_log, brain_folder_list)
-
-    pool.close()
-    pool.join()
-    elapsed = (time.time() - start)
-    print('Time needed to run is ' + str(elapsed))
-    return
-
-
-# In[3]:
-def single_brain_log2(srr):
-    print(srr)
 
 
 def single_brain_log(brain_regis, path, input_brainID):
@@ -186,17 +93,10 @@ def single_brain_log(brain_regis, path, input_brainID):
     exist_ori = os.path.exists(folder_ori)
     if not exist_ori:
         os.makedirs(folder_ori)
-        print('Creat new folder ' + str(folder_ori))
-        for iter_swc in os.listdir(os.path.join(path, input_brainID)):
-            if not iter_swc.endswith(("swc", "SWC")):
-                continue
-            shutil.move(os.path.join(os.path.join(path, input_brainID), iter_swc), folder_ori)
-            # Check wether there is swc outside ori when folder ori already exists
-    else:
-        for iter_check in os.listdir(os.path.join(path, input_brainID)):
-            if iter_check.endswith(("swc", "SWC")):
-                shutil.move(os.path.join(os.path.join(path, input_brainID), iter_check), folder_ori)
-                print('Move ' + str(iter_check) + ' to folder ori')
+    for iter_check in os.listdir(os.path.join(path, input_brainID)):
+        if iter_check.endswith(("swc", "SWC")):
+            shutil.move(os.path.join(os.path.join(path, input_brainID), iter_check), folder_ori)
+            print('Move ' + str(iter_check) + ' to folder ori')
     input_brainID = input_brainID
     folder_affine = os.path.join(os.path.join(path, input_brainID), 'affine')
     exist_affine = os.path.exists(folder_affine)
@@ -250,7 +150,8 @@ def single_brain_log(brain_regis, path, input_brainID):
 
         swc.to_csv(path_new, sep=" ")
         print('\n-----DOWNSAMPLE-------')
-        print('Saving current file to ' + str(path_new) + '\n')
+        print('Saving current file to ' + str(path_new))
+
     print('\n-----Affinement-------')
     print('Obtaining three files for brain ' + str(input_brainID) + ' for affinement:')
     for iter_s in os.listdir(path_stripm):
@@ -271,7 +172,6 @@ def single_brain_log(brain_regis, path, input_brainID):
         if str(affine_size) in iter_c:
             path_ccf_m = os.path.join(path_ccfM, iter_c)
             print('\tObtained standard-labelled marker file for brain ' + str(input_brainID))
-    print('\n')
 
     if os.path.exists(path_exe_affine) != 1:
         print('Make sure the .exe to perform affinement exists')
@@ -300,17 +200,16 @@ def single_brain_log(brain_regis, path, input_brainID):
                           '\n',
                           '\n',
                           ')',
-                          '\n',
-                          'pause'])
-    filepath = os.path.join(os.path.join(path, input_brainID), 'affine_swc.bat')
-    p = subprocess.Popen(filepath, shell=True, stdout=subprocess.PIPE)
-    stdout, stderr = p.communicate()
-    assert p.returncode == 0, "Affine process does not run successfully"
+                          '\n'])
+    filepath_Aff = os.path.join(os.path.join(path, input_brainID), 'affine_swc.bat')
+    print('Run code at ' + str(filepath_Aff))
+    os.system(filepath_Aff)
     assert len(os.listdir(folder_affine)) == len(
         os.listdir(folder_resample)), "Note that affined swc is not equal to resampled swc!"
     print('Have finished affinement')
 
     print('-----WRAP-----')
+    subtime = time.time()
     print('Obtaining four files for brain ' + str(input_brainID) + ' for warp:')
     for iter_d in os.listdir(path_af_brain):
         if iter_d.startswith(input_brainID):
@@ -328,29 +227,29 @@ def single_brain_log(brain_regis, path, input_brainID):
         if iter_bm.startswith(input_brainID):
             path_brainAT_m = os.path.join(path_autoBrain_m, iter_bm)
             print('\tObtained auto integrated marker for brain ' + str(input_brainID))
-    print('\n')
+
     path_op_warp = os.path.join(folder_stps, '%%~ni_affine.swc')
     # directory = 'C:/'
     with open(os.path.join(os.path.join(path, input_brainID), 'warp_swc.bat'), 'w') as OPATH_2:
         OPATH_2.writelines(['\n',
-                          'set input_path=' + str(folder_affine),
-                          '\n',
-                          'for /r %input_path% %%i in (*.swc) do (',
-                          '\n',
-                          str(path_exe_warp) + ' -t ' + str(path_ccfbrain) + ' -s ' + str(path_af_input_brainID) +
-                          ' -g ' + str(path_ssd) + ' -T ' + str(path_ccfAT_m) + ' -S ' + str(
-                              path_brainAT_m) + ' -w %%i  -o ' + str(path_op_warp),
-                          '\n',
-                          '\n',
-                          ')',
-                          '\n',
-                          'pause'])
-    print(filepath_warp)
-    #filepath_warp = os.path.join(os.path.join(path, input_brainID), 'warp_swc.bat')
-    #p = subprocess.Popen(filepath_warp, shell=True, stdout=subprocess.PIPE)
-    #stdout, stderr = p.communicate()
-    #assert p.returncode == 0, "Warp process does not run successfully"
+                            'set input_path=' + str(folder_affine),
+                            '\n',
+                            'for /r %input_path% %%i in (*.swc) do (',
+                            '\n',
+                            str(path_exe_warp) + ' -t ' + str(path_ccfbrain) + ' -s ' + str(path_af_input_brainID) +
+                            ' -g ' + str(path_ssd) + ' -T ' + str(path_ccfAT_m) + ' -S ' + str(
+                                path_brainAT_m) + ' -w %%i  -o ' + str(path_op_warp),
+                            '\n',
+                            '\n',
+                            ')',
+                            '\n'])
+    filepath_Warp = os.path.join(os.path.join(path, input_brainID), 'warp_swc.bat')
+    print('Run code at ' + str(filepath_Warp))
+    os.system(filepath_Warp)
     print(" Process brain %s Finished." % (input_brainID))
+    sub_elapsed = time.time() - subtime
+    print(" Time used for warpping brain " + str(input_brainID) + ' is %.2f ' % sub_elapsed)
+    print('Have finished Warp')
 
 
 if __name__ == '__main__':
@@ -381,12 +280,14 @@ if __name__ == '__main__':
     cores = int(multiprocessing.cpu_count() * 0.6)  # multiprocessing.cpu_count()
     pool = multiprocessing.Pool(processes=cores)
 
-    pool_list = []
-    result_list = []
-    func = partial(single_brain_log, brain_regis, path)
-    pool.map(func, brain_folder_list)
-
+    for iter_bb in brain_folder_list:
+        pool.apply_async(single_brain_log, (brain_regis, path, iter_bb))
+        # single_brain_log(brain_regis,path,iter_bb)
     pool.close()
     pool.join()
     elapsed = (time.time() - start)
-    print('Time needed to run is ' + str(elapsed))
+    print("Used %.2f to run all the brian" % elapsed)
+
+
+
+
