@@ -16,7 +16,7 @@ import multiprocessing
 from multiprocessing import Pool
 from functools import partial
 
-path = 'C:\\Users\\LuLu\\Desktop\\Pipeline_registration2'
+path = 'F:\\test21Nov'
 
 # In[2]:
 
